@@ -5,7 +5,10 @@
 // You can read more about it at https://doc.rust-lang.org/std/convert/trait.TryFrom.html
 // Execute `rustlings hint try_from_into` or use the `hint` watch subcommand for a hint.
 
-use std::convert::{TryFrom, TryInto};
+use std::{
+    convert::{TryFrom, TryInto},
+    u8,
+};
 
 #[derive(Debug, PartialEq)]
 struct Color {
@@ -23,8 +26,6 @@ enum IntoColorError {
     IntConversion,
 }
 
-// I AM NOT DONE
-
 // Your task is to complete this implementation
 // and return an Ok result of inner type Color.
 // You need to create an implementation for a tuple of three integers,
@@ -38,20 +39,44 @@ enum IntoColorError {
 impl TryFrom<(i16, i16, i16)> for Color {
     type Error = IntoColorError;
     fn try_from(tuple: (i16, i16, i16)) -> Result<Self, Self::Error> {
+        let range: std::ops::RangeInclusive<i16> = 0..=255;
+
+        if range.contains(&tuple.0) && range.contains(&tuple.1) && range.contains(&tuple.2) {
+            Ok(Color {
+                red: tuple.0 as u8,
+                green: tuple.1 as u8,
+                blue: tuple.2 as u8,
+            })
+        } else {
+            Err(IntoColorError::IntConversion)
+        }
     }
 }
 
 // Array implementation
-impl TryFrom<[i16; 3]> for Color {
+impl<T: TryInto<u8> + Copy> TryFrom<[T; 3]> for Color {
     type Error = IntoColorError;
-    fn try_from(arr: [i16; 3]) -> Result<Self, Self::Error> {
+    fn try_from(arr: [T; 3]) -> Result<Self, Self::Error> {
+        arr.iter()
+            .map(|x| (*x).try_into())
+            .collect::<Result<Vec<u8>, _>>()
+            .map_or(Err(IntoColorError::IntConversion), |a| {
+                Ok(Color {
+                    red: a[0],
+                    green: a[1],
+                    blue: a[2],
+                })
+            })
     }
 }
 
 // Slice implementation
-impl TryFrom<&[i16]> for Color {
+impl<T: TryInto<u8> + Copy> TryFrom<&[T]> for Color {
     type Error = IntoColorError;
-    fn try_from(slice: &[i16]) -> Result<Self, Self::Error> {
+    fn try_from(slice: &[T]) -> Result<Self, Self::Error> {
+        // TODO how to avoid creating the reference
+        let converted: Result<[T; 3], _> = slice.try_into();
+        converted.map_or(Err(IntoColorError::BadLen), TryInto::try_into)
     }
 }
 
